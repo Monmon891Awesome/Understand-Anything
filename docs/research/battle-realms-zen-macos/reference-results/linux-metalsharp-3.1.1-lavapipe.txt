@@ -1,0 +1,6 @@
+brz-probe 1.0.0 (label: ms2)
+
+== HWVP device ==
+
+ABORT during: CreateDevice (HWVP) (code 0x00000003)
+summary    aborted — the d3d9 implementation crashed or hung in the step above

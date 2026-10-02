@@ -1,0 +1,77 @@
+brz-probe 1.0.0 (label: wined3d)
+
+== HWVP device (like HardwareTL=1) ==
+d3d9.dll   C:\windows\system32\d3d9.dll
+           Wine builtin (WineD3D)
+adapter    NVIDIA GeForce GTX 470 | driver nvd3dum.dll | vendor 0x10de device 0x06cd
+caps       VS 3.0 PS 3.0, 8 texture stages, 8 simultaneous textures, max 16384x16384
+  PASS      ff: vertex colour, no texture      want ff8000 got ff8000
+  PASS      ff: TFACTOR select                 want 0000ff got 0000ff
+  PASS      tex A8R8G8B8 managed               want 00ff00 got 00ff00
+  PASS      tex X8R8G8B8 managed               want 00ff00 got 00ff00
+  PASS      tex R5G6B5 managed                 want 00ff00 got 00ff00
+  PASS      tex X1R5G5B5 managed               want 00ff00 got 00ff00
+  PASS      tex A1R5G5B5 managed               want 00ff00 got 00ff00
+  PASS      tex A4R4G4B4 managed               want 00ff00 got 00ff00
+  PASS      tex X4R4G4B4 managed               want 00ff00 got 00ff00
+  PASS      tex A1R5G5B5 mipmapped             want 00ff00 got 00ff00
+  PASS      tex A4R4G4B4 sysmem->default       want 00ff00 got 00ff00
+  PASS      tex R5G6B5 dynamic                 want 00ff00 got 00ff00
+  PASS      tex L8                             want c8c8c8 got c8c8c8
+  PASS      tex A8L8                           want c8c8c8 got c8c8c8
+  PASS      tex A8 (alpha replicate)           want c8c8c8 got c8c8c8
+  PASS      tex DXT1                           want 00ff00 got 00ff00
+  PASS      tex DXT3                           want 00ff00 got 00ff00
+  PASS      tex DXT5                           want 00ff00 got 00ff00
+  PASS      team colour A8R8G8B8 alpha=255     want 00ff00 got 00ff00
+  PASS      team colour A8R8G8B8 alpha=0       want 0000ff got 0000ff
+  PASS      team colour A4R4G4B4 alpha=255     want 00ff00 got 00ff00
+  PASS      team colour A4R4G4B4 alpha=0       want 0000ff got 0000ff
+  PASS      team colour A1R5G5B5 alpha=0       want 0000ff got 0000ff
+  PASS      ff: 2-stage modulate (16-bit)      want 00ff00 got 00ff00
+  PASS      light: directional, material red   want ff0000 got ff0000
+  PASS      light: directional, vertex colour  want 00ff00 got 00ff00
+  PASS      light: ambient only (64 grey)      want 404040 got 404040
+  PASS      alpha test keeps alpha=255         want 00ff00 got 00ff00
+  PASS      alpha test drops alpha=0           want 0a141e got 0a141e  (expects the quad to be discarded)
+  PASS      ff: alpha blend 50% red over clear want 850a0f got 850a0f
+  PASS      render-to-texture then sample      want ff00ff got ff00ff
+bench      1000 draws/frame x 30 frames: avg 6.13 ms (163 fps), best 5.53 ms, 163238 draws/s
+
+== SWVP device (like HardwareTL=0) ==
+  PASS      ff: vertex colour, no texture      want ff8000 got ff8000
+  PASS      ff: TFACTOR select                 want 0000ff got 0000ff
+  PASS      tex A8R8G8B8 managed               want 00ff00 got 00ff00
+  PASS      tex X8R8G8B8 managed               want 00ff00 got 00ff00
+  PASS      tex R5G6B5 managed                 want 00ff00 got 00ff00
+  PASS      tex X1R5G5B5 managed               want 00ff00 got 00ff00
+  PASS      tex A1R5G5B5 managed               want 00ff00 got 00ff00
+  PASS      tex A4R4G4B4 managed               want 00ff00 got 00ff00
+  PASS      tex X4R4G4B4 managed               want 00ff00 got 00ff00
+  PASS      tex A1R5G5B5 mipmapped             want 00ff00 got 00ff00
+  PASS      tex A4R4G4B4 sysmem->default       want 00ff00 got 00ff00
+  PASS      tex R5G6B5 dynamic                 want 00ff00 got 00ff00
+  PASS      tex L8                             want c8c8c8 got c8c8c8
+  PASS      tex A8L8                           want c8c8c8 got c8c8c8
+  PASS      tex A8 (alpha replicate)           want c8c8c8 got c8c8c8
+  PASS      tex DXT1                           want 00ff00 got 00ff00
+  PASS      tex DXT3                           want 00ff00 got 00ff00
+  PASS      tex DXT5                           want 00ff00 got 00ff00
+  PASS      team colour A8R8G8B8 alpha=255     want 00ff00 got 00ff00
+  PASS      team colour A8R8G8B8 alpha=0       want 0000ff got 0000ff
+  PASS      team colour A4R4G4B4 alpha=255     want 00ff00 got 00ff00
+  PASS      team colour A4R4G4B4 alpha=0       want 0000ff got 0000ff
+  PASS      team colour A1R5G5B5 alpha=0       want 0000ff got 0000ff
+  PASS      ff: 2-stage modulate (16-bit)      want 00ff00 got 00ff00
+  PASS      light: directional, material red   want ff0000 got ff0000
+  PASS      light: directional, vertex colour  want 00ff00 got 00ff00
+  PASS      light: ambient only (64 grey)      want 404040 got 404040
+  PASS      alpha test keeps alpha=255         want 00ff00 got 00ff00
+  PASS      alpha test drops alpha=0           want 0a141e got 0a141e  (expects the quad to be discarded)
+  PASS      ff: alpha blend 50% red over clear want 850a0f got 850a0f
+  PASS      render-to-texture then sample      want ff00ff got ff00ff
+
+== Direct3DCreate9On12 (like D3D9On12=1) ==
+  SKIP      Direct3DCreate9On12 is not exported by this d3d9.dll (a game with D3D9On12=1 must fall back to Direct3DCreate9)
+
+summary    62 passed, 0 failed, 1 skipped  -> brz-probe-wined3d.txt

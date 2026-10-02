@@ -1,0 +1,6 @@
+brz-probe 1.0.0 (label: dgvoodoo-dxvk11)
+
+== HWVP device (like HardwareTL=1) ==
+
+CRASH during: CreateDevice (HWVP) (code 0xc0000094)
+summary    aborted — the d3d9 implementation crashed or hung in the step above
