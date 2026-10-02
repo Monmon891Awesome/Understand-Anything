@@ -1,5 +1,7 @@
 # Battle Realms: Zen Edition on a base M1 MacBook — renderer research
 
+_Revised: corrected the DXVK-macOS fallback, added the MoltenVK swizzle hypothesis, tied the steps to `brz-mac.sh`. Start with `README.md` for the plan._
+
 _Research notes, October 2026. Target: MacBook (M1, 8-core CPU, 7/8-core GPU, 8 GB unified memory), ~17 GB free disk, Steam version of Battle Realms: Zen Edition (app 1025600), running through Wine (Sikarugir wrapper / Porting Kit)._
 
 ---
@@ -32,43 +34,44 @@ There are two separate problems:
 2. **Black units and buildings while the terrain looks fine.** This is a shading/sampling problem in **DXVK's D3D9 → Vulkan → MoltenVK** chain. Likely causes, most likely first:
    - **Texture sampler aliasing.** DXVK's D3D9 code binds textures in a way Metal can't express, so samplers come back empty and the model renders black. The maintained macOS fork of DXVK adds a `d3d9.deAliasedSamplers` setting for exactly this on MoltenVK. [metalsharp/DXVK-MacOS]
    - **Fixed-function lighting / vertex processing.** Battle Realms has a `HardwareTL` switch. With software T&L, DXVK has to emulate the vertex pipeline, and if lighting goes wrong you get lit-black models. (Upstream DXVK has had "black textures (incorrect lighting)" regressions of this kind.) [dxvk #3258]
-   - **An old D9VK build.** Sikarugir's "D9VK" toggle is an old fork (Gcenx/Wineskin d9vk). Newer DXVK-macOS builds include years of D3D9 fixes it doesn't have.
+   - **Missing texture swizzles in MoltenVK (less likely).** Apple Silicon GPUs support texture swizzle natively and MoltenVK normally uses it. Forcing `MVK_CONFIG_FULL_IMAGE_VIEW_SWIZZLE=1` is a cheap way to rule this out for old D3D9 formats (L8, A8L8).
+   - **Older D3D9 code.** Sikarugir's "D9VK" toggle is its own MoltenVK branch of DXVK. The metalsharp fork rebases onto DXVK 3.1 and adds MoltenVK sampler work, so comparing the two isolates a D3D9-implementation bug.
    - **The game's own material bug** (section 2). Make sure the game is on the latest patch, so we don't chase a bug that also happens on Windows.
 
 ## 4. Options ranked for this machine
 
-### Option A — Recommended first: DXVK-macOS (current fork) + `dxvk.conf` fixes, inside Sikarugir
+### Option A — Recommended first: DXVK D3D9 (metalsharp DXVK-MacOS) + `dxvk.conf` fixes, inside Sikarugir
 
-This keeps the Vulkan speed, which already solved the lag, and goes after the black shading directly.
+This keeps the Vulkan speed, which already solved the lag, and goes after the black shading directly. `brz-mac.sh` automates steps 2–5 (see `README.md`).
 
-1. In a **new** Sikarugir wrapper (don't reuse the broken one), use a recent WoW64-capable engine. In *Configure → Tools/Options*, turn **D9VK/DXVK on** and **DXMT and D3DMetal off**.
-2. Replace the wrapper's `d3d9.dll` (and `d3d8.dll`, `dxgi.dll`) in `drive_c/windows/syswow64/` with the **i386** DLLs from **metalsharp/DXVK-MacOS** releases (based on DXVK 3.1, has x86_64 + i386 D3D8/9/10/11/DXGI DLLs; needs macOS 15+). On macOS 14, use the Gcenx DXVK-macOS 1.10.x i386 DLLs instead.
-3. Set the DLL override `d3d9=n,b` (Configure → Advanced → Winetricks/Custom EXE flags, or `WINEDLLOVERRIDES="d3d9=n,b"`).
-4. Put a `dxvk.conf` next to `Battle_Realms_F.exe` (or point `DXVK_CONFIG_FILE` at it):
+> **Correction to the first version of this note:** Gcenx's DXVK-macOS (last release 1.10.3, 2023) does **not** provide D3D9. Its final repack deliberately removed `d3d9.dll` and `dxgi.dll` as "shouldn't be used on macOS", so it can't be a fallback here. The only D3D9-on-Vulkan builds for macOS are Sikarugir's own **D9VK** (`Sikarugir-App/d9vk`, the `moltenvk-version` branch) and **metalsharp/DXVK-MacOS** (DXVK 3.1 base, i386 + x86_64 D3D8/9/10/11 DLLs, `d3d9.deAliasedSamplers`). metalsharp is very new: one release (Sept 2026) and one maintainer. Treat it as promising but unproven, and keep the D9VK toggle as the comparison.
+
+1. In a **new** Sikarugir wrapper (don't reuse the broken one), use a recent WoW64-capable engine. In *Configure*, turn **D9VK on** and **DXMT and D3DMetal off**. Install Steam and the game, and launch once so `Battle_Realms.ini` exists.
+2. **Baseline with the wrapper's own D9VK** (`./brz-mac.sh profile wrapper`). Record whether units are black. This tells us whether the newer DXVK is needed at all.
+3. **Swap in metalsharp's i386 `d3d9.dll` for this game only:** `./brz-mac.sh profile dxvk ~/Downloads/DXVK-MacOS-v3.1`. The script copies the 32-bit `d3d9.dll` into the game folder and sets a **per-game** override (`HKCU\Software\Wine\AppDefaults\Battle_Realms_F.exe\DllOverrides`, `d3d9=native`). Steam and the rest of the wrapper aren't affected, and a Configure change can't overwrite it. Keep the wrapper's own MoltenVK at first. Only if that fails, try the MoltenVK dylib bundled in the release (back up `Contents/SharedSupport/wine/lib/libMoltenVK.dylib` first).
+4. `dxvk.conf` next to `Battle_Realms_F.exe` (installed by the script from `templates/dxvk.conf`). DXVK reads it from the game's working directory, so it works whether you launch from Finder or the script:
 
    ```ini
-   # --- black-unit fixes, try in this order ---
-   d3d9.deAliasedSamplers = True     # MoltenVK-safe sampler path (fork option)
-   d3d9.floatEmulation    = Strict   # stops 0*inf = NaN -> black pixels in old shaders
-   # d3d9.forceSamplerTypeSpecConstants = True   # try if units are still black
-
-   # --- performance / stability ---
-   dxgi.maxFrameLatency    = 1
-   d3d9.maxFrameRate       = 60      # stops the M1 from running hot and throttling
-   d3d9.presentInterval    = 1
+   d3d9.deAliasedSamplers = True     # MoltenVK-safe sampler path (fork-only key, ignored elsewhere)
+   d3d9.floatEmulation    = Strict   # 0*inf must be 0, not NaN -> black pixels
+   # d3d9.forceSamplerTypeSpecConstants = True   # step 2 if still black
+   # d3d9.shaderModel = 2                         # step 3 if still black
+   d3d9.maxFrameRate      = 60       # stops the M1 from running hot and throttling
+   d3d9.maxFrameLatency   = 1
+   d3d9.presentInterval   = 1
    d3d9.deferSurfaceCreation = True
    ```
 
-   (If you're on the older 1.10.x fork, also set `dxvk.enableAsync = True` to avoid shader-compile stutter in the first big battle. Newer builds use graphics-pipeline-library or the shader cache instead.)
-5. In the game's `.ini` (in the install folder / `%APPDATA%` copy), test **`HardwareTL=1`** first. That keeps vertex processing on the GPU and avoids DXVK's SWVP emulation, which is the likely cause of black lighting. Also set `Fullscreen=1`, as the Proton fixes do.
-6. **Black-screen fix:** in Sikarugir Configure → enable **"Windows virtual desktop"** at the native game resolution (e.g. 1440×900 or 1280×800), and turn **off** "Retina mode". Run the game at that same resolution. Plain fullscreen through MoltenVK is the usual cause of an all-black window.
-7. Optional check: add `DXVK_HUD=fps,drawcalls` (and `MVK_CONFIG_LOG_LEVEL=2`) to see whether frames are actually being drawn. A black screen with FPS climbing is a presentation problem (fix step 6). Black units are a shader/sampler problem (fix step 4).
+   On top of that, `brz-mac.sh launch` sets **`MVK_CONFIG_FULL_IMAGE_VIEW_SWIZZLE=1`**. Apple Silicon normally swizzles natively, so this mainly rules out the case where it doesn't for old D3D9 formats (L8, A8L8). It also sets `MVK_CONFIG_FAST_MATH_ENABLED=0` while we look for black-pixel NaNs.
+5. `Battle_Realms.ini` in the game folder: test **`HardwareTL=1`** first (`./brz-mac.sh ini set HardwareTL 1`). That keeps vertex processing on the GPU and avoids DXVK's software vertex processing (SWVP) emulation, which is the prime suspect for black lighting. Note the trade-off: the Steam community advises `HardwareTL=0` for "Could not initialize display mode", so if `1` won't start, that tells us something too. Keep `Fullscreen=1`, as in the Proton fixes.
+6. **Black-screen fix:** in Sikarugir Configure, turn **off** "Retina mode". If the window is still black, enable the virtual-desktop option (if your engine offers it), set to the game's resolution (e.g. 1440×900 or 1280×800), and run the game at that same resolution.
+7. Diagnose with `./brz-mac.sh launch --hud`. A black screen with the HUD's FPS climbing means a presentation problem (step 6). No HUD at all means DXVK didn't load (check the override with `./brz-mac.sh doctor`). Black units with the HUD showing mean a shader/sampler problem (steps 4–5).
 
 ### Option B — dgVoodoo2 (D3D9 → D3D11) + DXMT (D3D11 → Metal)
 
 This skips Vulkan and MoltenVK completely. DXMT is a Metal-native D3D10/11 layer and is now in Sikarugir and CrossOver. dgVoodoo2 turns the game's D3D9 calls into D3D11, and DXMT draws that through Metal.
 
-- Copy dgVoodoo2's `MS/x86/D3D9.dll` + `D3DImm.dll` + `DDraw.dll` and `dgVoodoo.conf` next to the game exe. Override `d3d9=n,b`. Set the output API to **Direct3D 11 (feature level 10.1/11)**. Untick "dgVoodoo watermark".
+- `./brz-mac.sh profile dgvoodoo ~/Downloads/dgVoodoo2_79_3`: copies dgVoodoo2's `MS/x86/D3D9.dll` and `templates/dgVoodoo.conf` (output API **D3D11 FL 11_0**, watermark off) next to the game exe, and sets a per-game `d3d9=native` override. The game only uses D3D9, so the DDraw/D3DImm DLLs aren't needed. Then in Configure: **DXMT on, DXVK/D9VK off**.
 - dgVoodoo2's D3D9 support is **partial**, so test it. The Battle Realms community has recommended **dgVoodoo2 v2.54** in particular (newer versions caused problems on Windows). Users on macOS have reported dgVoodoo **2.79.3 + DXMT** working for other D3D9 games. Try 2.79.x first, then 2.54.
 - Needs a wrapper engine whose DXMT build supports **32-bit (WoW64)**. Recent DXMT builds do, but check that yours does.
 - Upside: no MoltenVK, so the MoltenVK sampler bug can't happen, and Metal shaders run natively. Downside: it's two translation steps, and dgVoodoo's D3D9 support isn't complete.
@@ -117,7 +120,7 @@ LunarG's **KosmicKrisp** is a Vulkan 1.3-conformant driver that runs on Metal 4.
 
 1. Fresh Sikarugir wrapper, Steam installed, game updated to the latest patch (1.60+).
 2. **Option A** with metalsharp DXVK-macOS i386 DLLs, plus `dxvk.conf` with `deAliasedSamplers=True` and `floatEmulation=Strict`, plus `HardwareTL=1`, plus a virtual desktop.
-3. Units still black → add `forceSamplerTypeSpecConstants=True`, then try `HardwareTL=0`, then the Gcenx 1.10.3 DLLs.
+3. Units still black → `forceSamplerTypeSpecConstants=True`, then `shaderModel=2`, then `HardwareTL=0`, then the release's bundled MoltenVK. (Full decision tree in `README.md`.)
 4. Still black → **Option B** (dgVoodoo2 2.79.x → 2.54, output D3D11, DXMT on, DXVK off).
 5. Still unsolved → Option C/D, or report it upstream with a `DXVK_LOG_LEVEL=debug` log and screenshots (DXVK-MacOS issues, Sikarugir issues).
 
@@ -132,7 +135,8 @@ For each test, write down: avg FPS in a fixed skirmish (same map, 4 AIs, 10 minu
 - [Steam: How to run this game on Linux using Proton](https://steamcommunity.com/app/1025600/discussions/1/2576571891741571905/)
 - [ValveSoftware/Proton #3364 – Battle Realms](https://github.com/ValveSoftware/Proton/issues/3364)
 - [ProtonDB – Battle Realms: Zen Edition](https://www.protondb.com/app/1025600)
-- [metalsharp/DXVK-MacOS](https://github.com/metalsharp/DXVK-MacOS)
+- [metalsharp/DXVK-MacOS](https://github.com/metalsharp/DXVK-MacOS) · [releases](https://github.com/metalsharp/DXVK-MacOS/releases)
+- [Gcenx/DXVK-macOS releases (d3d9.dll removed in last repack)](https://github.com/Gcenx/DXVK-macOS/releases)
 - [doitsujin/dxvk #3258 – Black textures (incorrect lighting)](https://github.com/doitsujin/dxvk/issues/3258)
 - [DXVK 2.4 merges D8VK (GamingOnLinux)](https://www.gamingonlinux.com/2024/07/dxvk-24-brings-d8vk-for-direct3d-8-support-frame-rate-limiter-adjustments-lots-of-game-fixes/)
 - [Sikarugir](https://github.com/Sikarugir-App/Sikarugir) · [Sikarugir d9vk](https://github.com/The-Wineskin-Project/d9vk)
