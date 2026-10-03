@@ -1,5 +1,7 @@
 # Battle Realms: Zen Edition on M1: consultant's plan & toolkit
 
+> **Everything in one file (good for feeding to an AI assistant in your Mac terminal): [`PLAYBOOK.md`](PLAYBOOK.md).**
+
 > **Starting the debugging session? Go to [`MORNING.md`](MORNING.md).** This page is the overview.
 
 | | |

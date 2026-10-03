@@ -1,5 +1,7 @@
 # Morning runbook: debug the black units in ~45 minutes
 
+> **Everything in one file (good for feeding to an AI assistant in your Mac terminal): [`PLAYBOOK.md`](PLAYBOOK.md).**
+
 Do these four steps in order. Each step writes its results to `~/.brz-mac/`, and the last step bundles everything into one file for me. You don't need to interpret anything yourself, but the meanings are listed so you can.
 
 > Everything here changes **only this game's** settings inside the wrapper, and backs up first.
