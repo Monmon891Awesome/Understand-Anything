@@ -21,7 +21,7 @@
    - Sikarugir's D9VK only gained a software path for those formats in **June 2026**, and **no D9VK release contains it yet**. The latest release is from May 2025.
    - In D9VK, a fixed-function stage that reads a texture which isn't bound returns **(0,0,0,1): black**. So a unit texture that fails to create renders as exactly what you saw: black units on correct terrain.
    - I built that D9VK fix as a 32-bit DLL (`dlls/d9vk-f229921/`), plus a diagnostic variant that logs every texture format and blend stage the game uses.
-3. **The fully black screen is a different bug** (presentation), with different fixes: windowed mode, Retina off per game, `D3D9On12=0`.
+3. **The fully black screen is a different bug** (presentation), with different fixes: windowed mode, Retina off, `D3D9On12=0`.
 4. **Tonight's new finding: `D3D9On12 = 1` in `Battle_Realms.ini`.** The game can ask for Microsoft's D3D9-on-D3D12 layer. No Mac layer implements it: DXVK and Wine log it as unimplemented and fall back to plain D3D9, and Wine 9.0 doesn't even export the function. Setting it to `0` removes an unknown, at no cost.
 5. **The "lag when more units come in" has a likely mechanism.** New unit and effect types trigger pipeline compiles (SPIR-V → Metal). D9VK is the **async** DXVK 1.10.3 branch, so `dxvk.enableAsync = True` turns those hitches into pop-in. The DXVK 3.x fork (metalsharp) has no async on MoltenVK, so the *newer* build may stutter *more*.
 6. **What can't help this game:**
@@ -87,7 +87,7 @@ One bash file. It runs on macOS's own bash 3.2 and awk, with nothing to install.
 | `profile NAME [DIR]` | `wrapper`, `wined3d`, `wined3d-vk`, `d9vk`, `d9vk-diag`, `dxvk`, `dgvoodoo`. Picks i386 DLLs by PE header and refuses x64. |
 | `fetch dxvk\|dgvoodoo [ver]` | Downloads the metalsharp DXVK-MacOS release / dgVoodoo2 (default 2.87.5) into `~/.brz-mac/downloads` |
 | `identify [files]` | What a `d3d9.dll` really is (Wine builtin/placeholder, D9VK/DXVK + traits like `+16-bit-promotion`, `+diag-logging`, `+async`, dgVoodoo) |
-| `ini …`, `conf dxvk\|dgvoodoo …`, `retina on\|off` | Edit `Battle_Realms.ini` (new keys go into the right `[section]`), `dxvk.conf`/`dgVoodoo.conf`, and per-game Retina mode |
+| `ini …`, `conf dxvk\|dgvoodoo …`, `retina on\|off` | Edit `Battle_Realms.ini` (new keys go into the right `[section]`), `dxvk.conf`/`dgVoodoo.conf`, and Retina mode (wrapper-wide, like Configure) |
 | `launch [--hud] [--debug]` | Quiet Steam (`-silent -nofriendsui -nochatui -noverifyfiles -applaunch 1025600`) with the MoltenVK, MSync and DXVK log env. `DXVK_LOG_PATH` is set as a Windows `Z:` path, because Wine ignores Unix paths for it. |
 | `bench`, `disk [--clean]`, `logs`, `kill`, `restore` | Benchmark log · space · zip of raw logs · stop Wine · undo everything |
 
@@ -134,3 +134,11 @@ One bash file. It runs on macOS's own bash 3.2 and awk, with nothing to install.
 ## 9. What I need from you
 
 The `report-*.md` from `bash brz-mac.sh report`, and one screenshot of the black units (if any remain). See [`MORNING.md`](MORNING.md).
+
+## 10. The skill: `skill/mac-wine-dx9-games`
+
+Everything above is packaged as a reusable skill for Claude: the reasoning, the decision tables, and the toolkit with its DLLs and probe. It works for Battle Realms and for other old DirectX 9-era games.
+
+- **Claude Code on the Mac:** `mkdir -p ~/.claude/skills && cp -R ~/brz/docs/research/battle-realms-zen-macos/skill/mac-wine-dx9-games ~/.claude/skills/`, then start a new `claude` session. It triggers on requests like "my old game has black textures in Sikarugir".
+- **Claude app / claude.ai:** use the `.skill` file (the "Save skill" button on the file card, or upload it in your skills settings).
+- **Keeping it in sync:** after changing anything in this folder, run `tools/sync-skill.sh`. The test suite fails if the skill copy drifts.

@@ -1,0 +1,271 @@
+diff --git a/src/d3d9/d3d9_common_texture.cpp b/src/d3d9/d3d9_common_texture.cpp
+index db55b8c..7ee0f15 100644
+--- a/src/d3d9/d3d9_common_texture.cpp
++++ b/src/d3d9/d3d9_common_texture.cpp
+@@ -2,6 +2,7 @@
+ 
+ #include "d3d9_util.h"
+ #include "d3d9_device.h"
++#include "d3d9_diag.h"
+ 
+ #include "../util/util_shared_res.h"
+ 
+@@ -45,6 +46,20 @@ namespace dxvk {
+                        (m_mapping.FormatColor == VK_FORMAT_D32_SFLOAT_S8_UINT || m_mapping.FormatColor == VK_FORMAT_D32_SFLOAT);
+     m_supportsFetch4 = DetermineFetch4Compatibility();
+ 
++    {
++      uint64_t key = diag::mix(diag::mix(diag::mix(uint64_t(m_desc.Format), m_desc.Usage), m_desc.Pool), uint64_t(ResourceType));
++      diag::once(diag::Texture, key, [&] {
++        return str::format("texture fmt=", m_desc.Format,
++          " type=", diag::rtypeName(ResourceType),
++          " pool=", diag::poolName(m_desc.Pool),
++          " usage=0x", std::hex, m_desc.Usage, std::dec,
++          " size=", m_desc.Width, "x", m_desc.Height, " levels=", m_desc.MipLevels,
++          " -> vk=", m_mapping.FormatColor,
++          " conversion=", uint32_t(m_mapping.ConversionFormatInfo.FormatType),
++          (m_mapping.FormatColor == VK_FORMAT_UNDEFINED ? " UNSUPPORTED" : ""));
++      });
++    }
++
+     const bool createImage = m_desc.Pool != D3DPOOL_SYSTEMMEM && m_desc.Pool != D3DPOOL_SCRATCH && m_desc.Format != D3D9Format::NULL_FORMAT;
+     if (createImage) {
+       bool plainSurface = m_type == D3DRTYPE_SURFACE &&
+diff --git a/src/d3d9/d3d9_device.cpp b/src/d3d9/d3d9_device.cpp
+index 6d63381..8a0e49d 100644
+--- a/src/d3d9/d3d9_device.cpp
++++ b/src/d3d9/d3d9_device.cpp
+@@ -1,4 +1,5 @@
+ #include "d3d9_device.h"
++#include "d3d9_diag.h"
+ 
+ #include "d3d9_annotation.h"
+ #include "d3d9_common_texture.h"
+@@ -83,6 +84,15 @@ namespace dxvk {
+     if (!(BehaviorFlags & D3DCREATE_FPU_PRESERVE))
+       SetupFPU();
+ 
++    Logger::info(str::format("D3D9-DIAG: device created, BehaviorFlags=0x", std::hex, BehaviorFlags, std::dec,
++      (BehaviorFlags & D3DCREATE_SOFTWARE_VERTEXPROCESSING) ? " SOFTWARE_VP" : "",
++      (BehaviorFlags & D3DCREATE_HARDWARE_VERTEXPROCESSING) ? " HARDWARE_VP" : "",
++      (BehaviorFlags & D3DCREATE_MIXED_VERTEXPROCESSING)    ? " MIXED_VP" : "",
++      (BehaviorFlags & D3DCREATE_MULTITHREADED)             ? " MULTITHREADED" : "",
++      (BehaviorFlags & D3DCREATE_FPU_PRESERVE)              ? " FPU_PRESERVE" : "",
++      " robustness2=", m_dxvkDevice->features().extRobustness2.robustBufferAccess2 ? "yes" : "no",
++      " nullDescriptor=", m_dxvkDevice->features().extRobustness2.nullDescriptor ? "yes" : "no"));
++
+     m_dxsoOptions = DxsoOptions(this, m_d3d9Options);
+ 
+     const bool supportsRobustness2 = m_dxvkDevice->features().extRobustness2.robustBufferAccess2;
+@@ -6907,6 +6917,15 @@ namespace dxvk {
+ 
+     UpdatePointMode(PrimitiveType == D3DPT_POINTLIST);
+ 
++    {
++      const bool progVS = UseProgrammableVS();
++      const bool progPS = UseProgrammablePS();
++      diag::once(diag::DrawPath, uint64_t(progVS) * 2 + uint64_t(progPS), [&] {
++        return str::format("draw path VS=", progVS ? "shader" : "fixed-function",
++          " PS=", progPS ? "shader" : "fixed-function", " (first seen at primitive type ", uint32_t(PrimitiveType), ")");
++      });
++    }
++
+     if (likely(UseProgrammableVS())) {
+       if (unlikely(m_flags.test(D3D9DeviceFlag::DirtyProgVertexShader))) {
+         m_flags.set(D3D9DeviceFlag::DirtyInputLayout);
+diff --git a/src/d3d9/d3d9_diag.h b/src/d3d9/d3d9_diag.h
+new file mode 100644
+index 0000000..20e4f07
+--- /dev/null
++++ b/src/d3d9/d3d9_diag.h
+@@ -0,0 +1,90 @@
++#pragma once
++
++// brz diagnostic build: log each distinct thing the game asks D3D9 for, once.
++// Lines start with "D3D9-DIAG:" so they are easy to grep in <exe>_d3d9.log.
++
++#include <cstdint>
++#include <mutex>
++#include <string>
++#include <unordered_set>
++
++#include "../util/log/log.h"
++#include "../util/thread.h"
++#include "../util/util_string.h"
++
++namespace dxvk::diag {
++
++  enum Category : uint32_t {
++    Texture = 0,
++    FormatCheck,
++    DrawPath,
++    FixedFunctionVS,
++    FixedFunctionPS,
++    CategoryCount
++  };
++
++  // Builds and logs the message only the first time `key` is seen in `cat`.
++  // Each category is capped so a pathological game cannot flood the log.
++  template <typename Fn>
++  void once(Category cat, uint64_t key, Fn&& makeMessage, size_t limit = 400) {
++    static dxvk::mutex mutex;
++    static std::unordered_set<uint64_t> seen[CategoryCount];
++
++    {
++      std::lock_guard<dxvk::mutex> lock(mutex);
++      auto& set = seen[cat];
++      if (set.size() >= limit || !set.insert(key).second)
++        return;
++      if (set.size() == limit)
++        Logger::info(str::format("D3D9-DIAG: category ", uint32_t(cat), " reached ", limit, " entries, no more logged"));
++    }
++
++    Logger::info(str::format("D3D9-DIAG: ", makeMessage()));
++  }
++
++  inline uint64_t mix(uint64_t h, uint64_t v) {
++    return (h ^ (v + 0x9e3779b97f4a7c15ull + (h << 6) + (h >> 2))) * 0x100000001b3ull;
++  }
++
++  inline const char* topName(uint32_t op) {
++    static const char* names[] = { "?", "DISABLE", "SELECTARG1", "SELECTARG2", "MODULATE", "MODULATE2X",
++      "MODULATE4X", "ADD", "ADDSIGNED", "ADDSIGNED2X", "SUBTRACT", "ADDSMOOTH", "BLENDDIFFUSEALPHA",
++      "BLENDTEXTUREALPHA", "BLENDFACTORALPHA", "BLENDTEXTUREALPHAPM", "BLENDCURRENTALPHA", "PREMODULATE",
++      "MODULATEALPHA_ADDCOLOR", "MODULATECOLOR_ADDALPHA", "MODULATEINVALPHA_ADDCOLOR",
++      "MODULATEINVCOLOR_ADDALPHA", "BUMPENVMAP", "BUMPENVMAPLUMINANCE", "DOTPRODUCT3", "MULTIPLYADD", "LERP" };
++    return op < sizeof(names) / sizeof(names[0]) ? names[op] : "?";
++  }
++
++  inline std::string taName(uint32_t arg) {
++    static const char* names[] = { "DIFFUSE", "CURRENT", "TEXTURE", "TFACTOR", "SPECULAR", "TEMP", "CONSTANT" };
++    std::string s = (arg & 0xf) < 7 ? names[arg & 0xf] : "?";
++    if (arg & 0x10) s = "1-" + s;      // D3DTA_COMPLEMENT
++    if (arg & 0x20) s += ".aaaa";      // D3DTA_ALPHAREPLICATE
++    return s;
++  }
++
++  inline const char* poolName(uint32_t pool) {
++    switch (pool) {
++      case 0: return "DEFAULT";
++      case 1: return "MANAGED";
++      case 2: return "SYSTEMMEM";
++      case 3: return "SCRATCH";
++      case 6: return "MANAGED_EX";
++      default: return "?";
++    }
++  }
++
++  inline const char* rtypeName(uint32_t type) {
++    switch (type) {
++      case 1: return "SURFACE";
++      case 2: return "VOLUME";
++      case 3: return "TEXTURE";
++      case 4: return "VOLUMETEXTURE";
++      case 5: return "CUBETEXTURE";
++      case 6: return "VERTEXBUFFER";
++      case 7: return "INDEXBUFFER";
++      default: return "?";
++    }
++  }
++
++}
+diff --git a/src/d3d9/d3d9_fixed_function.cpp b/src/d3d9/d3d9_fixed_function.cpp
+index 32aa3be..9e85465 100644
+--- a/src/d3d9/d3d9_fixed_function.cpp
++++ b/src/d3d9/d3d9_fixed_function.cpp
+@@ -1,4 +1,5 @@
+ #include "d3d9_fixed_function.h"
++#include "d3d9_diag.h"
+ 
+ #include "d3d9_device.h"
+ #include "d3d9_util.h"
+@@ -2395,6 +2396,24 @@ namespace dxvk {
+ 
+     std::string name = str::format("FF_", shaderKey.toString());
+ 
++    {
++      const auto& c = Key.Data.Contents;
++      uint64_t key = 0;
++      for (uint32_t i = 0; i < std::size(Key.Data.Primitive); i++)
++        key = diag::mix(key, Key.Data.Primitive[i]);
++      diag::once(diag::FixedFunctionVS, key, [&] {
++        return str::format("FF VS ", name,
++          " positionT=", c.HasPositionT, " color0=", c.HasColor0, " color1=", c.HasColor1,
++          " lighting=", c.UseLighting, " lights=", c.LightCount,
++          " diffuseSrc=", c.DiffuseSource, " ambientSrc=", c.AmbientSource,
++          " specularSrc=", c.SpecularSource, " emissiveSrc=", c.EmissiveSource,
++          " normalize=", c.NormalizeNormals, " fog=", c.HasFog,
++          " blend=", c.VertexBlendMode, "/", c.VertexBlendCount,
++          " texDecl=0x", std::hex, c.TexcoordDeclMask, " texIdx=0x", c.TexcoordIndices,
++          " xform=0x", c.TransformFlags, std::dec);
++      });
++    }
++
+     D3D9FFShaderCompiler compiler(
+       pDevice->GetDXVKDevice(),
+       Key, name,
+@@ -2418,6 +2437,29 @@ namespace dxvk {
+ 
+     std::string name = str::format("FF_", shaderKey.toString());
+ 
++    {
++      uint64_t key = 0;
++      for (uint32_t i = 0; i < caps::TextureStageCount; i++)
++        key = diag::mix(diag::mix(key, Key.Stages[i].Primitive[0]), Key.Stages[i].Primitive[1]);
++      diag::once(diag::FixedFunctionPS, key, [&] {
++        std::string out = str::format("FF PS ", name);
++        for (uint32_t i = 0; i < caps::TextureStageCount; i++) {
++          const auto& st = Key.Stages[i].Contents;
++          if (st.ColorOp == D3DTOP_DISABLE)
++            break;
++          out += str::format(" | s", i, " C=", diag::topName(st.ColorOp),
++            "(", diag::taName(st.ColorArg1), ",", diag::taName(st.ColorArg2), ")",
++            " A=", diag::topName(st.AlphaOp),
++            "(", diag::taName(st.AlphaArg1), ",", diag::taName(st.AlphaArg2), ")",
++            " tex=", st.TextureBound, " type=", st.Type,
++            st.ResultIsTemp ? " ->TEMP" : "");
++        }
++        if (Key.Stages[0].Contents.GlobalFlatShade)      out += " flat";
++        if (Key.Stages[0].Contents.GlobalSpecularEnable) out += " specular";
++        return out;
++      });
++    }
++
+     D3D9FFShaderCompiler compiler(
+       pDevice->GetDXVKDevice(),
+       Key, name,
+diff --git a/src/d3d9/d3d9_interface.cpp b/src/d3d9/d3d9_interface.cpp
+index 58e51d7..ddf38fa 100644
+--- a/src/d3d9/d3d9_interface.cpp
++++ b/src/d3d9/d3d9_interface.cpp
+@@ -1,4 +1,5 @@
+ #include "d3d9_interface.h"
++#include "d3d9_diag.h"
+ 
+ #include "d3d9_monitor.h"
+ #include "d3d9_caps.h"
+@@ -169,12 +170,22 @@ namespace dxvk {
+           DWORD           Usage,
+           D3DRESOURCETYPE RType,
+           D3DFORMAT       CheckFormat) {
+-    if (auto* adapter = GetAdapter(Adapter))
+-      return adapter->CheckDeviceFormat(
++    if (auto* adapter = GetAdapter(Adapter)) {
++      HRESULT hr = adapter->CheckDeviceFormat(
+         DeviceType, EnumerateFormat(AdapterFormat),
+         Usage, RType,
+         EnumerateFormat(CheckFormat));
+ 
++      uint64_t key = diag::mix(diag::mix(uint64_t(CheckFormat), Usage), uint64_t(RType));
++      diag::once(diag::FormatCheck, key, [&] {
++        return str::format("CheckDeviceFormat fmt=", EnumerateFormat(CheckFormat),
++          " rtype=", diag::rtypeName(RType),
++          " usage=0x", std::hex, Usage, std::dec,
++          " -> ", SUCCEEDED(hr) ? "OK" : "NOTAVAILABLE");
++      });
++      return hr;
++    }
++
+     return D3DERR_INVALIDCALL;
+   }
+ 

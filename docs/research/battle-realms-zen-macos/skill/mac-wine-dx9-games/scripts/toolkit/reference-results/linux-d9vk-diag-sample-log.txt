@@ -1,0 +1,47 @@
+info:  D3D9-DIAG: CheckDeviceFormat fmt=D3D9Format::A1R5G5B5 rtype=TEXTURE usage=0x0 -> OK
+info:  D3D9-DIAG: CheckDeviceFormat fmt=D3D9Format::A4R4G4B4 rtype=TEXTURE usage=0x0 -> OK
+info:  D3D9-DIAG: CheckDeviceFormat fmt=D3D9Format::A8 rtype=TEXTURE usage=0x0 -> OK
+info:  D3D9-DIAG: CheckDeviceFormat fmt=D3D9Format::A8L8 rtype=TEXTURE usage=0x0 -> OK
+info:  D3D9-DIAG: CheckDeviceFormat fmt=D3D9Format::A8R8G8B8 rtype=TEXTURE usage=0x0 -> OK
+info:  D3D9-DIAG: CheckDeviceFormat fmt=D3D9Format::DXT1 rtype=TEXTURE usage=0x0 -> OK
+info:  D3D9-DIAG: CheckDeviceFormat fmt=D3D9Format::DXT3 rtype=TEXTURE usage=0x0 -> OK
+info:  D3D9-DIAG: CheckDeviceFormat fmt=D3D9Format::DXT5 rtype=TEXTURE usage=0x0 -> OK
+info:  D3D9-DIAG: CheckDeviceFormat fmt=D3D9Format::L8 rtype=TEXTURE usage=0x0 -> OK
+info:  D3D9-DIAG: CheckDeviceFormat fmt=D3D9Format::R5G6B5 rtype=TEXTURE usage=0x0 -> OK
+info:  D3D9-DIAG: CheckDeviceFormat fmt=D3D9Format::R5G6B5 rtype=TEXTURE usage=0x200 -> OK
+info:  D3D9-DIAG: CheckDeviceFormat fmt=D3D9Format::X1R5G5B5 rtype=TEXTURE usage=0x0 -> OK
+info:  D3D9-DIAG: CheckDeviceFormat fmt=D3D9Format::X4R4G4B4 rtype=TEXTURE usage=0x0 -> OK
+info:  D3D9-DIAG: CheckDeviceFormat fmt=D3D9Format::X8R8G8B8 rtype=TEXTURE usage=0x0 -> OK
+info:  D3D9-DIAG: FF PS FF_FS_07e0e6376bb42237b9d8c1f725b1e50653b313af | s0 C=SELECTARG1(TFACTOR,DIFFUSE) A=SELECTARG1(TEXTURE,DIFFUSE) tex=0 type=0
+info:  D3D9-DIAG: FF PS FF_FS_321d22db69b99bb298b8f3cc7fb68bd662305575 | s0 C=BLENDTEXTUREALPHA(TEXTURE,TFACTOR) A=SELECTARG1(TEXTURE,DIFFUSE) tex=1 type=0
+info:  D3D9-DIAG: FF PS FF_FS_505520f4153880498c8d98e27c035b044e41675f | s0 C=MODULATE(TEXTURE,DIFFUSE) A=SELECTARG1(TEXTURE,DIFFUSE) tex=1 type=0 | s1 C=MODULATE(TEXTURE,CURRENT) A=SELECTARG1(CURRENT,CURRENT) tex=1 type=0
+info:  D3D9-DIAG: FF PS FF_FS_6ac60a4c5c7194b9e8f3a32206947a06d49d4e85 | s0 C=SELECTARG2(TEXTURE,DIFFUSE) A=SELECTARG2(TEXTURE,DIFFUSE) tex=0 type=0
+info:  D3D9-DIAG: FF PS FF_FS_a72df8b6f970dc80a1e069604a49d19ca8f1098a | s0 C=SELECTARG1(TEXTURE,DIFFUSE) A=SELECTARG1(TEXTURE,DIFFUSE) tex=1 type=0
+info:  D3D9-DIAG: FF PS FF_FS_ad39d05014e2841f0a58f9847169223151424c59 | s0 C=SELECTARG1(TEXTURE.aaaa,DIFFUSE) A=SELECTARG1(TEXTURE,DIFFUSE) tex=1 type=0
+info:  D3D9-DIAG: FF VS FF_VS_10b7ce3d7f58d814800d8a2be01a7a752c4c9a06 positionT=1 color0=1 color1=0 lighting=0 lights=0 diffuseSrc=0 ambientSrc=0 specularSrc=0 emissiveSrc=0 normalize=0 fog=0 blend=0/0 texDecl=0x2 texIdx=0xfac688 xform=0x0
+info:  D3D9-DIAG: FF VS FF_VS_320c67c7ea485c671f1c2372889b9d68986197cd positionT=0 color0=1 color1=0 lighting=1 lights=1 diffuseSrc=0 ambientSrc=0 specularSrc=0 emissiveSrc=0 normalize=0 fog=0 blend=0/0 texDecl=0x2 texIdx=0xfac688 xform=0x0
+info:  D3D9-DIAG: FF VS FF_VS_436c9a3c6f925564b142e9132ed916cb538d4cf5 positionT=0 color0=1 color1=0 lighting=1 lights=1 diffuseSrc=1 ambientSrc=0 specularSrc=0 emissiveSrc=0 normalize=0 fog=0 blend=0/0 texDecl=0x2 texIdx=0xfac688 xform=0x0
+info:  D3D9-DIAG: FF VS FF_VS_72acf28dfaf64e22348f9ce719a6549c476bb94f positionT=0 color0=1 color1=0 lighting=1 lights=0 diffuseSrc=0 ambientSrc=0 specularSrc=0 emissiveSrc=0 normalize=0 fog=0 blend=0/0 texDecl=0x2 texIdx=0xfac688 xform=0x0
+info:  D3D9-DIAG: FF VS FF_VS_7727a5a100ac7f2ce3df8027ca8d6dc67779402e positionT=1 color0=1 color1=0 lighting=0 lights=0 diffuseSrc=0 ambientSrc=0 specularSrc=0 emissiveSrc=0 normalize=0 fog=0 blend=0/0 texDecl=0x2 texIdx=0xfac680 xform=0x0
+info:  D3D9-DIAG: device created, BehaviorFlags=0x22 SOFTWARE_VP FPU_PRESERVE robustness2=yes nullDescriptor=yes
+info:  D3D9-DIAG: device created, BehaviorFlags=0x42 HARDWARE_VP FPU_PRESERVE robustness2=yes nullDescriptor=yes
+info:  D3D9-DIAG: draw path VS=fixed-function PS=fixed-function (first seen at primitive type 5)
+info:  D3D9-DIAG: texture fmt=D3D9Format::A1R5G5B5 type=TEXTURE pool=MANAGED usage=0x0 size=16x16 levels=1 -> vk=VK_FORMAT_A1R5G5B5_UNORM_PACK16 conversion=0
+info:  D3D9-DIAG: texture fmt=D3D9Format::A4R4G4B4 type=TEXTURE pool=DEFAULT usage=0x0 size=16x16 levels=1 -> vk=VK_FORMAT_B8G8R8A8_UNORM conversion=9
+info:  D3D9-DIAG: texture fmt=D3D9Format::A4R4G4B4 type=TEXTURE pool=MANAGED usage=0x0 size=16x16 levels=1 -> vk=VK_FORMAT_B8G8R8A8_UNORM conversion=9
+info:  D3D9-DIAG: texture fmt=D3D9Format::A4R4G4B4 type=TEXTURE pool=SYSTEMMEM usage=0x0 size=16x16 levels=1 -> vk=VK_FORMAT_B8G8R8A8_UNORM conversion=9
+info:  D3D9-DIAG: texture fmt=D3D9Format::A8 type=TEXTURE pool=MANAGED usage=0x0 size=16x16 levels=1 -> vk=VK_FORMAT_R8_UNORM conversion=0
+info:  D3D9-DIAG: texture fmt=D3D9Format::A8L8 type=TEXTURE pool=MANAGED usage=0x0 size=16x16 levels=1 -> vk=VK_FORMAT_R8G8_UNORM conversion=0
+info:  D3D9-DIAG: texture fmt=D3D9Format::A8R8G8B8 type=TEXTURE pool=DEFAULT usage=0x1 size=64x64 levels=1 -> vk=VK_FORMAT_B8G8R8A8_UNORM conversion=0
+info:  D3D9-DIAG: texture fmt=D3D9Format::A8R8G8B8 type=TEXTURE pool=MANAGED usage=0x0 size=16x16 levels=1 -> vk=VK_FORMAT_B8G8R8A8_UNORM conversion=0
+info:  D3D9-DIAG: texture fmt=D3D9Format::DXT1 type=TEXTURE pool=MANAGED usage=0x0 size=16x16 levels=1 -> vk=VK_FORMAT_BC1_RGBA_UNORM_BLOCK conversion=0
+info:  D3D9-DIAG: texture fmt=D3D9Format::DXT3 type=TEXTURE pool=MANAGED usage=0x0 size=16x16 levels=1 -> vk=VK_FORMAT_BC2_UNORM_BLOCK conversion=0
+info:  D3D9-DIAG: texture fmt=D3D9Format::DXT5 type=TEXTURE pool=MANAGED usage=0x0 size=16x16 levels=1 -> vk=VK_FORMAT_BC3_UNORM_BLOCK conversion=0
+info:  D3D9-DIAG: texture fmt=D3D9Format::L8 type=TEXTURE pool=MANAGED usage=0x0 size=16x16 levels=1 -> vk=VK_FORMAT_R8_UNORM conversion=0
+info:  D3D9-DIAG: texture fmt=D3D9Format::R5G6B5 type=TEXTURE pool=DEFAULT usage=0x200 size=16x16 levels=1 -> vk=VK_FORMAT_R5G6B5_UNORM_PACK16 conversion=0
+info:  D3D9-DIAG: texture fmt=D3D9Format::R5G6B5 type=TEXTURE pool=MANAGED usage=0x0 size=16x16 levels=1 -> vk=VK_FORMAT_R5G6B5_UNORM_PACK16 conversion=0
+info:  D3D9-DIAG: texture fmt=D3D9Format::X1R5G5B5 type=TEXTURE pool=MANAGED usage=0x0 size=16x16 levels=1 -> vk=VK_FORMAT_A1R5G5B5_UNORM_PACK16 conversion=0
+info:  D3D9-DIAG: texture fmt=D3D9Format::X4R4G4B4 type=TEXTURE pool=MANAGED usage=0x0 size=16x16 levels=1 -> vk=VK_FORMAT_B8G8R8A8_UNORM conversion=9
+info:  D3D9-DIAG: texture fmt=D3D9Format::X8R8G8B8 type=SURFACE pool=DEFAULT usage=0x1 size=256x256 levels=1 -> vk=VK_FORMAT_B8G8R8A8_UNORM conversion=0
+info:  D3D9-DIAG: texture fmt=D3D9Format::X8R8G8B8 type=SURFACE pool=SYSTEMMEM usage=0x0 size=256x256 levels=1 -> vk=VK_FORMAT_B8G8R8A8_UNORM conversion=0
+info:  D3D9-DIAG: texture fmt=D3D9Format::X8R8G8B8 type=TEXTURE pool=MANAGED usage=0x0 size=16x16 levels=1 -> vk=VK_FORMAT_B8G8R8A8_UNORM conversion=0

@@ -108,7 +108,7 @@ The rounds, in order:
 8. `wined3d-vk`: Wine's own D3D9 on Vulkan
 9. `wined3d`: Wine on OpenGL, the slow but correct reference
 
-The triage stops as soon as a round gives a correct picture at 45 FPS or more. A whole-screen-black answer automatically repeats that round in windowed mode (`Fullscreen=0`) with Retina off for the game. Ctrl-C is safe at any time, and `bash brz-mac.sh triage` resumes where you stopped.
+The triage stops as soon as a round gives a correct picture at 45 FPS or more. A whole-screen-black answer automatically repeats that round in windowed mode (`Fullscreen=0`) with Retina off. Ctrl-C is safe at any time, and `bash brz-mac.sh triage` resumes where you stopped.
 
 ## 4. Send me the report (1 min)
 

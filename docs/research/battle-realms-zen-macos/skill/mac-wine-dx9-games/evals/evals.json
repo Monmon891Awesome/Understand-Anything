@@ -1,0 +1,23 @@
+{
+  "skill_name": "mac-wine-dx9-games",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "battle realms zen edition on my m1 macbook air through porting kit / sikarugir. with opengl it lags like crazy in big fights and cutscenes, with vulkan its smooth but either the whole screen is black or all the units and buildings are pitch black. tried the D3DMetal toggle too, nothing. how do i fix this for real",
+      "expected_output": "Explains that D3DMetal cannot help a 32-bit D3D9 game, separates the whole-screen-black (presentation) bug from black units (texture/shading), names the unreleased D9VK 16-bit texture fix as the prime suspect, and gives the concrete toolkit path: doctor, probe, the d9vk profile, D3D9On12=0, HardwareTL, windowed + Retina off for a black screen, with one change per round and restore available.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "I have an old 2005 DirectX 9 strategy game from Steam running in a Sikarugir wrapper on my M3 Pro. Menus are fine but every time a new unit type or spell effect shows up for the first time the game hitches for half a second, and in really big battles it drops to ~25 fps. I'm using the wrapper's default D3D9 path. What's going on and what should I change?",
+      "expected_output": "Distinguishes first-appearance hitches (pipeline compiles; dxvk.enableAsync on D9VK, state cache, avoid DXVK 3.x which has no async on MoltenVK) from sustained low FPS in big fights (CPU-bound single thread under Rosetta: GPU T&L switches, Low Power Mode off, charger, frame cap). Points the toolkit at a non-Battle-Realms game via BRZ_GAME_DIR, BRZ_GAME_EXE, BRZ_APPID (and BRZ_INI_NAME if it has an ini), and suggests checking which d3d9.dll actually loads.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "ran `bash brz-mac.sh probe` on my mac. matrix says wrapper has BLACK on 'tex A4R4G4B4 managed' and 'team colour A4R4G4B4 alpha=0', d9vk column is all ok but the line under the table says 'dxvk: ABORT during: CreateDevice (HWVP)'. doctor says MoltenVK 1.2.10. what does this mean and what do I do next?",
+      "expected_output": "Reads the matrix correctly: the wrapper's D9VK has the 16-bit texture bug and the bundled d9vk build fixes it; the dxvk (DXVK 3.x) abort comes from MoltenVK older than 1.3.0 lacking VK_KHR_load_store_op_none, so skip that layer. Next step: profile d9vk (then the in-game rounds/triage), keep the change reversible, and verify in game.",
+      "files": []
+    }
+  ]
+}

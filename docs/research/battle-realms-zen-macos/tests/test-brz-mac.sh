@@ -113,8 +113,11 @@ check   "  game's own d3d9.dll is back"           grep -q 'GAME-OWN-D3D9' "$GAME
 check   "profile wined3d -> renderer gl"          bash -c "bash '$TOOL' profile wined3d >/dev/null && grep -q '\"renderer\"=\"gl\"' '$PFX/user.reg'"
 check   "profile wrapper clears per-app keys"     bash -c "bash '$TOOL' profile wrapper >/dev/null && ! grep -q '\"renderer\"=' '$PFX/user.reg' && ! grep -q '\"d3d9\"=' '$PFX/user.reg'"
 check   "unknown profile fails"                   bash -c "! bash '$TOOL' profile nope"
-check   "retina off (per game)"                   run retina off
-out_has "  doctor shows it"                       'mac driver: "RetinaMode"="N"' run doctor
+check   "retina off"                              run retina off
+check   "  wrapper-wide key, like Configure"      bash -c "awk '/^\[Software\\\\\\\\Wine\\\\\\\\Mac Driver\]/{f=1;next} /^\[/{f=0} f && /\"RetinaMode\"=\"N\"/{ok=1} END{exit !ok}' \"\$1\"" _ "$PFX/user.reg"
+check   "  LogPixels 96 like Configure"           grep -q '"LogPixels"="96"' "$PFX/user.reg"
+check   "  not written per app (Wine ignores it)" bash -c "! grep -qi 'AppDefaults.*Mac Driver' \"\$1\"" _ "$PFX/user.reg"
+out_has "  doctor shows it"                       'global mac driver: "RetinaMode"="N"' run doctor
 check   "retina default removes it"               bash -c "bash '$TOOL' retina default >/dev/null && ! grep -q RetinaMode '$PFX/user.reg'"
 
 # --- probe + matrix -------------------------------------------------------------
@@ -200,6 +203,37 @@ check   "  ini restored"                          grep -q $'^HardwareTL =0\r$' "
 check   "  game's own d3d9.dll restored"          grep -q 'GAME-OWN-D3D9' "$GAME/d3d9.dll"
 check   "  no stash left behind"                  bash -c "! ls '$GAME' | grep -q brz-orig"
 check   "  profile marker cleared"                test ! -f "$GAME/.brz-profile"
+
+# --- the bundled skill copy -------------------------------------------------------------
+SKILLTOOL="$ROOT/skill/mac-wine-dx9-games/scripts/toolkit/brz-mac.sh"
+check   "skill copy is in sync with the toolkit"  bash "$ROOT/tools/sync-skill.sh" --check
+out_has "skill copy runs (help)"                  "brz-mac" bash "$SKILLTOOL" help
+out_has "skill copy finds its own DLLs"           "+16-bit-promotion" bash "$SKILLTOOL" identify "$ROOT/skill/mac-wine-dx9-games/scripts/toolkit/dlls/d9vk-f229921/d3d9.dll"
+check   "skill copy applies profile d9vk"         bash -c "BRZ_YES=1 bash '$SKILLTOOL' profile d9vk >/dev/null && cmp -s \"\$1/d3d9.dll\" '$ROOT/skill/mac-wine-dx9-games/scripts/toolkit/dlls/d9vk-f229921/d3d9.dll'" _ "$GAME"
+check   "  and back to the wrapper"               bash -c "BRZ_YES=1 bash '$SKILLTOOL' profile wrapper >/dev/null && grep -q GAME-OWN-D3D9 \"\$1/d3d9.dll\"" _ "$GAME"
+
+# --- other games: BRZ_APPID / BRZ_INI_NAME / BRZ_GAME_EXE ------------------------------
+check   "BRZ_APPID changes -applaunch"            env BRZ_APPID=4242 bash "$TOOL" launch
+sleep 1
+check   "  used -applaunch 4242"                  grep -q 'steam.exe .*-applaunch 4242' "$PFX/wine-calls.log"
+
+W2="$TMP/Other Game.app"; PFX2="$W2/Contents/SharedSupport/prefix"
+G2="$PFX2/drive_c/Program Files (x86)/Steam/steamapps/common/Some Old RTS"
+mkdir -p "$W2/Contents/SharedSupport/wine/bin" "$G2" "$PFX2/dosdevices"
+cp "$W/Contents/SharedSupport/wine/bin/wine" "$W/Contents/SharedSupport/wine/bin/wineserver" "$W2/Contents/SharedSupport/wine/bin/"
+printf 'WINE REGISTRY Version 2\r\n' > "$PFX2/user.reg"
+printf '[Video]\r\nWindowed=0\r\n' > "$G2/game.ini"
+make_pe "$G2/rts.exe" '\x4c\x01'
+other() { env BRZ_WRAPPER="$W2" BRZ_HOME="$TMP/home2" BRZ_INI_NAME=game.ini BRZ_GAME_EXE=rts.exe bash "$TOOL" "$@"; }
+out_has "other game: doctor finds it"             "rts.exe (i386)" other doctor
+check   "other game: ini set (own section)"       other ini set Windowed 1
+check   "  value"                                 bash -c "tr -d '\r' < \"\$1\" | grep -qx 'Windowed=1'" _ "$G2/game.ini"
+check   "other game: new key goes to BRZ_INI_SECTION" bash -c "env BRZ_WRAPPER='$W2' BRZ_HOME='$TMP/home2' BRZ_INI_NAME=game.ini BRZ_GAME_EXE=rts.exe BRZ_INI_SECTION=Video bash '$TOOL' ini set Gamma 5 >/dev/null && tr -d '\r' < \"\$1\" | awk '/^\[/{sec=\$0} /^Gamma=5/{print sec}' | grep -qx '\[Video\]'" _ "$G2/game.ini"
+check   "other game: profile d9vk"                other profile d9vk
+check   "  DLL next to rts.exe"                   cmp -s "$G2/d3d9.dll" "$ROOT/dlls/d9vk-f229921/d3d9.dll"
+check   "  per-app override for rts.exe"          grep -q 'AppDefaults\\\\rts.exe\\\\DllOverrides' "$PFX2/user.reg"
+check   "other game: restore"                     other restore
+check   "  DLL removed again"                     test ! -f "$G2/d3d9.dll"
 
 echo
 echo "passed $PASS, failed $FAIL"
